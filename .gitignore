@@ -1,0 +1,6 @@
+/target/
+/.idea/
+/*.iml
+/*.db
+# Credenciales del correo (no subir al repositorio)
+mail.properties
