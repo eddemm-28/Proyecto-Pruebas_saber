@@ -1,0 +1,8 @@
+# Copia este archivo como mail.properties (en la carpeta donde ejecutas el programa)
+# y completa los datos. Sin mail.properties los correos se simulan por consola.
+mail.smtp.host=smtp.gmail.com
+mail.smtp.port=587
+mail.username=tu_correo@gmail.com
+# En Gmail usa una "contraseña de aplicación", no tu contraseña normal
+mail.password=tu_contraseña_de_aplicacion
+mail.from=tu_correo@gmail.com
