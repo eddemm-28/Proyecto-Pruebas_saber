@@ -1,104 +1,146 @@
-# Sistema para la Gestión de Usuarios y Banco de Preguntas (Saber Pro)
+# Banco de Preguntas Saber Pro
 
-**Universidad del Cauca**  
-**Facultad de Ingeniería Electrónica y Telecomunicaciones**  
-**Programa de Ingeniería de Sistemas**  
-**Laboratorio de Ingeniería de Software II**  
-**Taller 4: Patrón Capas y Micro patrón MVC + Observer**  
-**Taller 5: Patrones Microkernel y Tuberías y Filtros**  
-**Periodo 2-2026**
+**Universidad del Cauca**
+**Facultad de Ingeniería Electrónica y Telecomunicaciones**
+**Programa de Ingeniería de Sistemas**
+**Ingeniería de Software II (Teoría y Laboratorio) - Periodo 2026.2**
+**Proyecto de curso - Primer corte**
 
 ---
 
-## 📌 Descripción del Proyecto
+## Descripción
 
-Este proyecto implementa la aplicación de escritorio monolítica en Java Swing para la gestión de usuarios del sistema de evaluación Saber Pro, cumpliendo con los requerimientos expresados en la guía de laboratorio.
+Aplicación de escritorio monolítica en Java Swing para gestionar el ciclo de vida de preguntas de selección múltiple con única respuesta, orientadas a la preparación de las pruebas Saber Pro del programa de Ingeniería de Sistemas.
 
-Permite el registro de usuarios con roles específicos, validación rigurosa de complejidad de contraseñas, almacenamiento cifrado seguro con **Argon2id**, persistencia en **SQLite** y un tablero o menú contextual con opciones diferenciadas por el rol del usuario autenticado.
+Incluye gestión de usuarios con roles, creación y validación de preguntas, listado con paginación y filtros, y asignación de revisores con notificación por correo. La persistencia es SQLite y las contraseñas se almacenan con **Argon2id**.
 
----
+El código parte de los talleres 4 (capas, MVC y Observer) y 5 (Microkernel y Tuberías y Filtros) del laboratorio y se extiende con las historias de usuario del primer corte.
 
-## 📐 Cumplimiento de Principios SOLID
+## Equipo
 
-El diseño de la arquitectura sigue el ejemplo 5 de Inversión de Dependencias (DIP) visto en la teoría del curso:
-
-1. **Single Responsibility Principle (SRP):**
-   - `User`: Representa la entidad de dominio.
-   - `PasswordValidator`: Responsable exclusivamente de validar las reglas de complejidad de la contraseña.
-   - `PasswordHasher`: Responsable únicamente del hashing y verificación segura utilizando Argon2.
-   - `SqliteUserRepository`: Encargado de la persistencia de datos en SQLite.
-   - `UserService`: Gestiona la lógica de negocio del registro y autenticación.
-   - `LoginFrame`, `RegisterFrame`, `DashboardFrame`: Encargados de la capa de presentación (GUI Swing).
-
-2. **Open/Closed Principle (OCP):**
-   - Las abstracciones `IUserRepository`, `IPasswordHasher` y `IPasswordValidator` permiten extender o cambiar la implementación (por ejemplo, cambiar a PostgreSQL, MariaDB o BCrypt) sin modificar el código fuente de `UserService`.
-
-3. **Liskov Substitution Principle (LSP):**
-   - `SqliteUserRepository` sustituye limpiamente a `IUserRepository` garantizando el contrato de la interfaz sin comportamiento inesperado.
-
-4. **Interface Segregation Principle (ISP):**
-   - Las interfaces son pequeñas y orientadas a propósitos específicos (`IUserRepository`, `IPasswordHasher`, `IPasswordValidator`).
-
-5. **Dependency Inversion Principle (DIP):**
-   - El módulo de alto nivel (`UserService`) depende únicamente de interfaces/abstracciones y no de clases concretas de infraestructura. Las dependencias se inyectan a través de su constructor en `Main.java`.
+| Integrante | Responsabilidades principales |
+|---|---|
+| Eddy Sanchez | Programador y Analista |
+| Johan Santiago López | Analista y Testing |
+| Sebastian Tintinago| Programador y Testing |
 
 ---
 
-## 🔑 Requisitos de Seguridad y Contraseñas
+## Primer corte: historias de usuario implementadas
 
-Durante el registro de un usuario, se solicitan los siguientes datos:
-- **Nombre de usuario (Login)**
-- **Nombre completo**
-- **Rol del usuario:** Administrador, Autor de preguntas, Revisor, Docente, Estudiante.
-- **Estado del usuario:** Activo / Inactivo.
-- **Contraseña:** Debe cumplir con:
-  - Mínimo 6 caracteres.
-  - Al menos una letra mayúscula.
-  - Al menos un dígito.
-  - Al menos un carácter especial (ej. `@`, `#`, `$`, `!`, `%`, `*`).
-- **Almacenamiento cifrado:** La contraseña nunca se guarda en texto plano; se utiliza **Argon2id** (`argon2-jvm`).
+| HU | Rol | Qué hace | Clases principales |
+|---|---|---|---|
+| 1 | Autor de preguntas | Crea preguntas de selección múltiple con contexto, pregunta directa, 4 opciones, respuesta correcta, justificación, bibliografía, competencia, tema, subtema y dificultad. Al grabar se aplica la validación estructural. | `GUIQuestionForm`, `QuestionValidator`, `QuestionService.createQuestion` |
+| 2 | Autor de preguntas | Pasa sus preguntas de **Borrador** a **Pendiente de revisión**. Los estados se ven con colores (azul = Borrador, ámbar = Pendiente, rojo = Eliminada). | `GUIMyQuestions`, `EstadoColores`, `QuestionService.sendToReview` |
+| 3 | Autor de preguntas | Lista sus preguntas con paginación y filtros (estado, dificultad, tema, competencia y texto). Puede ver o editar sus borradores. | `GUIMyQuestions`, `QuestionFilter`, `PageResult`, `QuestionService.searchByAuthor` |
+| 4 | Administrador | Asigna uno o más revisores a las preguntas Pendientes de revisión. Al asignar, cada revisor recibe un correo. | `GUIAssignReviewers`, `ReviewService`, `INotificador` |
+
+### Validación estructural al grabar (HU1)
+
+`QuestionValidator` verifica: campos obligatorios completos, longitud mínima de los textos largos, cuatro opciones no vacías y no repetidas, y respuesta correcta entre A y D.
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
+## Arquitectura
+
+Monolito de escritorio en 3 capas, con MVC en la capa de presentación.
+
+```
+src/main/java/co/edu/unicauca/
+├── presentation/   Vista (Swing). Solo habla con los controladores
+├── controller/     QuestionController, ReviewController
+├── domain/         Entidades, servicios, validadores y abstracciones
+├── access/         Repositorios SQLite
+├── infra/          Notificaciones (correo y consola)
+├── kernel/         QuestionMicrokernel
+├── pipeline/       Filter<T> y Pipeline<T>
+├── plugin/         API y gestor de plugins
+└── plugins/        multiplechoice, casequestion, multimedia
+```
+
+- **Presentación (Vista):** `presentation/`.
+- **Controlador:** `controller/`.
+- **Dominio (Modelo):** `domain/`, con entidades, servicios y abstracciones de repositorio y notificación.
+- **Acceso a datos e infraestructura:** `access/` (SQLite) e `infra/` (correo).
+- **Composición:** `AppContext` crea los objetos concretos e inyecta las dependencias por constructor.
+
+### Patrones
+
+Patrones GoF:
+- **Observer:** las ventanas se refrescan cuando cambian las preguntas (`Subject`/`Observer`).
+- **Factory:** `NotificadorFactory` crea el notificador de correo o de consola.
+
+Patrones de acceso a datos y arquitectónicos:
+- **Repository:** el dominio depende de interfaces; SQLite es un detalle de `access/`.
+- **Capas y MVC:** separación de presentación, controlador, dominio y datos.
+- **Microkernel y Pipes and Filters:** módulo de plugins para nuevos tipos de pregunta (ver Taller 5).
+
+### Principios SOLID
+
+1. **SRP:** cada clase tiene una responsabilidad. `User` y `Question` son entidades; `QuestionValidator` valida; `PasswordHasher` aplica Argon2; los repositorios `Sqlite*` persisten; `UserService`, `QuestionService` y `ReviewService` contienen la lógica de negocio; las clases `GUI*` y `*Frame` son la presentación.
+2. **OCP:** las abstracciones (`IUserRepository`, `QuestionRepository`, `ReviewAssignmentRepository`, `INotificador`, `IPasswordHasher`, `IPasswordValidator`) permiten cambiar la base de datos, el hash o el canal de notificación sin tocar los servicios. Los nuevos tipos de pregunta se agregan como plugins sin modificar el núcleo.
+3. **LSP:** las implementaciones (`Sqlite*Repository`, notificadores de correo y consola) sustituyen a sus interfaces sin cambiar el comportamiento esperado.
+4. **ISP:** interfaces pequeñas y específicas.
+5. **DIP:** `UserService`, `QuestionService` y `ReviewService` dependen de interfaces, no de clases concretas; las dependencias se inyectan en `AppContext`.
+
+---
+
+## Requisitos de seguridad y contraseñas
+
+Durante el registro se solicitan:
+- **Nombre de usuario (login).**
+- **Nombre completo y correo electrónico.**
+- **Rol:** Administrador, Autor de preguntas, Revisor, Docente, Estudiante.
+- **Estado:** Activo / Inactivo.
+- **Contraseña:** mínimo 6 caracteres, al menos una mayúscula, un dígito y un carácter especial (`@`, `#`, `$`, `!`, `%`, `*`).
+
+La contraseña nunca se guarda en texto plano: se utiliza **Argon2id** (`argon2-jvm`).
+
+---
+
+## Tecnologías
 
 - **Lenguaje:** Java 17+
 - **GUI:** Java Swing
-- **Gestor de Dependencias:** Apache Maven
-- **Base de Datos:** SQLite (JDBC `sqlite-jdbc`)
+- **Gestor de dependencias:** Apache Maven
+- **Base de datos:** SQLite (`sqlite-jdbc`)
 - **Seguridad:** Argon2id (`argon2-jvm`)
-- **Pruebas Unitarias:** JUnit 5 (Jupiter)
+- **Correo:** Jakarta Mail
+- **Pruebas unitarias:** JUnit 5 (Jupiter)
 
 ---
 
-## 🚀 Compilación y Ejecución
+## Compilación y ejecución
 
 ### 1. Clonar el repositorio
 ```bash
 git clone <URL-del-repositorio>
-cd LISWII_T4_G06
+cd <nombre-del-repositorio>
 ```
 
-### 2. Compilar el proyecto
+### 2. Compilar
 ```bash
 mvn compile
 ```
 
-### 3. Ejecutar las Pruebas Unitarias Automatizadas (JUnit 5)
+### 3. Pruebas unitarias (JUnit 5)
 ```bash
 mvn test
 ```
+Cubren entidades, servicios y validadores del dominio, repositorios y controladores.
 
-### 4. Ejecutar la Aplicación
+### 4. Ejecutar
 ```bash
-mvn exec:java
+mvn exec:java                             # inicio de sesión normal
+mvn exec:java -Dexec.args="--questions"   # abrir directamente el módulo de preguntas
+mvn exec:java -Dexec.args="--plugins"     # abrir directamente el generador de preguntas
 ```
 
 ---
 
-## 👥 Usuarios de Prueba Sembrados Inicialmente
+## Usuarios de prueba sembrados
 
-Si la base de datos `users.db` está vacía, la aplicación sembrará automáticamente los siguientes usuarios de prueba:
+Si la base de datos `users.db` está vacía, la aplicación siembra estos usuarios:
 
 | Login | Contraseña | Rol | Estado |
 |---|---|---|---|
@@ -108,26 +150,13 @@ Si la base de datos `users.db` está vacía, la aplicación sembrará automátic
 | `docente1` | `Docen123!` | Docente | Activo |
 | `estudiante1` | `Estud123!` | Estudiante | Activo |
 
----
+Las preguntas y las asignaciones se guardan en `users.db` (SQLite). Si ya existía ese archivo de una versión anterior, la columna `email` se agrega sola.
 
-## 📝 Primer Corte: Historias de Usuario Implementadas
+### Flujo para probarlo
 
-| HU | Rol | Qué hace | Clases principales |
-|---|---|---|---|
-| 1 | Autor de preguntas | Crea preguntas de selección múltiple con contexto, pregunta directa, 4 opciones, respuesta correcta, justificación, bibliografía, competencia, tema, subtema y dificultad. Al grabar se aplica la validación estructural. | `GUIQuestionForm`, `QuestionValidator`, `QuestionService.createQuestion` |
-| 2 | Autor de preguntas | Pasa sus preguntas de **Borrador** a **Pendiente de revisión**. Los estados se ven con colores (azul = Borrador, ámbar = Pendiente, rojo = Eliminada). | `GUIMyQuestions`, `EstadoColores`, `QuestionService.sendToReview` |
-| 3 | Autor de preguntas | Lista sus preguntas con paginación y filtros (estado, dificultad, tema, competencia y texto). Puede ver o editar sus borradores. | `GUIMyQuestions`, `QuestionFilter`, `PageResult`, `QuestionService.searchByAuthor` |
-| 4 | Administrador | Asigna uno o más revisores a las preguntas Pendientes de revisión. Al asignar, cada revisor recibe un correo. | `GUIAssignReviewers`, `ReviewService`, `INotificador` |
-
-### Arquitectura en 3 capas + MVC
-
-- **Presentación (Vista):** `presentation/` (Swing). Solo habla con los controladores.
-- **Controlador:** `controller/QuestionController` y `controller/ReviewController`.
-- **Dominio (Modelo):** `domain/` con entidades, servicios y abstracciones de repositorio y notificación.
-- **Acceso a datos / infraestructura:** `access/` (SQLite) e `infra/` (correo).
-- **Composición:** `AppContext` crea los objetos concretos e inyecta las dependencias.
-
-Patrones GoF usados: Observer (las ventanas se refrescan solas), Microkernel, Pipes & Filters y Factory (`NotificadorFactory`).
+1. Ingresa con `autor1`, `revisor1` y `admin`. Sus correos son de ejemplo; para recibir el aviso real, registra un revisor con tu correo.
+2. Como autor: *Crear pregunta* y luego *Mis preguntas* → *Enviar a revisión*.
+3. Como administrador: *Asignar revisores* → elige la pregunta y uno o más revisores.
 
 ### Envío de correos (HU4)
 
@@ -135,45 +164,54 @@ Patrones GoF usados: Observer (las ventanas se refrescan solas), Microkernel, Pi
 2. Completa el servidor SMTP, el usuario y la contraseña (en Gmail, una *contraseña de aplicación*).
 3. Si no existe `mail.properties`, los correos se **simulan por consola** y la aplicación funciona igual.
 
-Todo usuario se registra con correo; los revisores reciben el aviso en el que tengan registrado.
-
-### Flujo para probarlo
-
-1. Ingresa con los usuarios de prueba (`autor1`, `revisor1`, `admin`). Sus correos son de ejemplo: si configuraste SMTP y quieres recibir el aviso, registra un revisor nuevo con tu correo real.
-2. Como autor: *Crear pregunta* y luego *Mis preguntas* → *Enviar a revisión*.
-3. Como administrador: *Asignar revisores* → elige la pregunta y uno o más revisores.
-
-> Las preguntas y las asignaciones se guardan en `users.db` (SQLite). Si ya tenías ese archivo de una versión anterior, la columna `email` se agrega sola.
+`mail.properties` y `users.db` están en `.gitignore` y no deben subirse.
 
 ---
 
-## 🧩 Taller 5: Microkernel + Tuberías y Filtros
+## Taller 5: Microkernel + Tuberías y Filtros
 
-### Estructura de paquetes agregada
-- `co.edu.unicauca.plugin.api` → contrato `QuestionPlugin` y `QuestionRequest`.
-- `co.edu.unicauca.plugin.manager` → `QuestionPluginManager` (carga plugins por reflexión desde `plugins.properties`).
-- `co.edu.unicauca.kernel` → `QuestionMicrokernel` (núcleo con `Map<String, Question>`).
-- `co.edu.unicauca.pipeline` → `Filter<T>` y `Pipeline<T>` genéricos.
-- `co.edu.unicauca.plugins.multiplechoice` → plugin de selección múltiple + los 4 filtros del pipeline.
-- `co.edu.unicauca.plugins.casequestion` → plugin de preguntas basadas en casos.
-- `co.edu.unicauca.plugins.multimedia` → plugin de preguntas con multimedia.
+### Paquetes
+- `plugin.api`: contrato `QuestionPlugin` y `QuestionRequest`.
+- `plugin.manager`: `QuestionPluginManager` (carga plugins por reflexión desde `plugins.properties`).
+- `kernel`: `QuestionMicrokernel` (núcleo con `Map<String, Question>`).
+- `pipeline`: `Filter<T>` y `Pipeline<T>` genéricos.
+- `plugins.multiplechoice`: plugin de selección múltiple y sus 4 filtros.
+- `plugins.casequestion`: plugin de preguntas basadas en casos.
+- `plugins.multimedia`: plugin de preguntas con multimedia.
 
 ### Pipeline del plugin de selección múltiple
-1. `ContentValidationFilter` — contenido no vacío, longitud mínima.
-2. `OptionsValidationFilter` — exactamente 4 opciones, sin vacías, sin duplicadas.
-3. `ClassificationFilter` — asigna competencia y dificultad.
-4. `CorrectAnswerValidationFilter` — la respuesta correcta coincide con alguna opción.
+1. `ContentValidationFilter`: contenido no vacío, longitud mínima.
+2. `OptionsValidationFilter`: exactamente 4 opciones, sin vacías, sin duplicadas.
+3. `ClassificationFilter`: asigna competencia y dificultad.
+4. `CorrectAnswerValidationFilter`: la respuesta correcta coincide con alguna opción.
 
-### Cambio en la vista (Dashboard) por rol
-El tablero muestra opciones distintas según el rol autenticado:
-- Administrador → Asignar revisores + Banco de preguntas + Generador de plugins.
-- Autor de preguntas → Crear pregunta + Mis preguntas + Generador de plugins.
-- Revisor → Banco de preguntas.
-- Docente → mensaje informativo (reportes/seguimiento pendiente).
-- Estudiante → mensaje informativo (simulacros pendiente).
+### Vista por rol (Dashboard)
+- Administrador: Asignar revisores, Banco de preguntas y Generador de plugins.
+- Autor de preguntas: Crear pregunta, Mis preguntas y Generador de plugins.
+- Revisor: Banco de preguntas.
+- Docente: mensaje informativo (reportes y seguimiento pendientes).
+- Estudiante: mensaje informativo (simulacros pendientes).
 
-### Ejecución
-```bash
-mvn exec:java                    # login normal
-mvn exec:java -Dexec.args="--plugins"   # abrir directamente el generador de preguntas
+---
+
+## Estructura del repositorio
+
 ```
+.
+├── docs/                      Documento de arquitectura y diagramas (C4, UML, ER)
+├── src/main/java             Código fuente
+├── src/main/resources        Configuración (plugins.properties)
+├── src/test/java             Pruebas unitarias
+├── mail.properties.example   Plantilla de configuración del correo
+└── pom.xml
+```
+
+## Flujo de trabajo
+
+- Metodología Scrum; tablero del Sprint 1 en Trello: [Trello-Soft_II](https://trello.com/invite/b/6acdb7e2de7a7de28b4deabe/ATTI96ee1d851b33da793e26f1665193978d6D5C0891/soft-ii-sistema-pruebas-saber).
+- Mensajes de commit con Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`).
+
+## Entregables
+
+- Documento de arquitectura: [Enlace a Drive](https://drive.google.com/drive/folders/1NiCGFvfRr0prJAtw_y8NcZm89vNoj_wU?usp=sharing)
+- Video de sustentación (YouTube): _enlace pendiente_
