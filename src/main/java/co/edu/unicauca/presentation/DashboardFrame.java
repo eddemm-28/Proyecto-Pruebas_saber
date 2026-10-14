@@ -75,7 +75,7 @@ public class DashboardFrame extends JFrame {
 
         if (role == Role.ADMINISTRADOR || role == Role.AUTOR_DE_PREGUNTAS) {
             JButton btnPlugins = styledButton("Generar preguntas (Plugins)", new Color(16, 129, 79));
-            btnPlugins.addActionListener(e -> launchPluginGenerator());
+            btnPlugins.addActionListener(e -> launchPluginGenerator(context.getQuestionService()));
             centerPanel.add(btnPlugins);
             centerPanel.add(Box.createVerticalStrut(10));
         }
@@ -121,11 +121,11 @@ public class DashboardFrame extends JFrame {
         guiObserver2.setVisible(true);
     }
 
-    public static void launchPluginGenerator() {
+    public static void launchPluginGenerator(QuestionService questionService) {
         if (sharedKernel == null) {
             sharedKernel = new QuestionMicrokernel();
         }
-        GUIPluginGenerator gen = new GUIPluginGenerator(sharedKernel);
+        GUIPluginGenerator gen = new GUIPluginGenerator(sharedKernel, questionService);
         gen.setVisible(true);
     }
 }

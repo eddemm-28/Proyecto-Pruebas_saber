@@ -2,6 +2,7 @@ package co.edu.unicauca.presentation;
 
 import co.edu.unicauca.domain.Question;
 import co.edu.unicauca.domain.QuestionService;
+import co.edu.unicauca.infra.Observer;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -12,7 +13,7 @@ import java.awt.event.ActionEvent;
 /**
  * Ventana principal de la interfaz gráfica para la gestión de preguntas del Banco Saber PRO.
  */
-public class GUIQuestions extends JFrame {
+public class GUIQuestions extends JFrame implements Observer {
     private final QuestionService questionService;
 
     private JComboBox<Question> cbQuestions;
@@ -32,6 +33,7 @@ public class GUIQuestions extends JFrame {
 
     public GUIQuestions(QuestionService questionService) {
         this.questionService = questionService;
+        this.questionService.addObserver(this);
         initComponents();
         loadQuestionsToCombo();
         if (cbQuestions.getItemCount() > 0) {
@@ -184,6 +186,21 @@ public class GUIQuestions extends JFrame {
         btnCargar.addActionListener((ActionEvent e) -> cargarPreguntaSeleccionada());
         cbQuestions.addActionListener((ActionEvent e) -> cargarPreguntaSeleccionada());
         btnActualizarEstado.addActionListener((ActionEvent e) -> actualizarEstadoPregunta());
+    }
+
+    /** Se llama cuando el QuestionService cambia (pregunta nueva, cambio de estado, etc.). */
+    @Override
+    public void update(Object obj) {
+        SwingUtilities.invokeLater(() -> {
+            String selectedId = currentQuestion != null ? currentQuestion.getId() : null;
+            loadQuestionsToCombo();
+            for (int i = 0; i < cbQuestions.getItemCount(); i++) {
+                if (cbQuestions.getItemAt(i).getId().equals(selectedId)) {
+                    cbQuestions.setSelectedIndex(i);
+                    break;
+                }
+            }
+        });
     }
 
     public void loadQuestionsToCombo() {

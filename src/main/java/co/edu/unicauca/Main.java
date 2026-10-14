@@ -24,7 +24,9 @@ public class Main {
             return;
         }
         if (args.length > 0 && "--plugins".equalsIgnoreCase(args[0])) {
-            SwingUtilities.invokeLater(DashboardFrame::launchPluginGenerator);
+            AppContext pluginContext = new AppContext();
+            SwingUtilities.invokeLater(() ->
+                    DashboardFrame.launchPluginGenerator(pluginContext.getQuestionService()));
             return;
         }
 

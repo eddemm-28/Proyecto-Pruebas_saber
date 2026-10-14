@@ -1,6 +1,7 @@
 package co.edu.unicauca.presentation;
 
 import co.edu.unicauca.domain.Question;
+import co.edu.unicauca.domain.QuestionService;
 import co.edu.unicauca.kernel.QuestionMicrokernel;
 import co.edu.unicauca.plugin.api.QuestionRequest;
 
@@ -12,6 +13,7 @@ import java.util.List;
 public class GUIPluginGenerator extends JFrame {
 
     private final QuestionMicrokernel kernel;
+    private final QuestionService questionService;
 
     private JComboBox<String> cbType;
     private JTextField txtTitle;
@@ -22,8 +24,9 @@ public class GUIPluginGenerator extends JFrame {
     private JComboBox<String> cbDifficulty;
     private JTextArea txtResult;
 
-    public GUIPluginGenerator(QuestionMicrokernel kernel) {
+    public GUIPluginGenerator(QuestionMicrokernel kernel, QuestionService questionService) {
         this.kernel = kernel;
+        this.questionService = questionService;
         initComponents();
     }
 
@@ -121,6 +124,10 @@ public class GUIPluginGenerator extends JFrame {
                     (String) cbDifficulty.getSelectedItem()
             );
             Question q = kernel.generate(req);
+            // Guardar también en el banco real (SQLite) para que aparezca en "Banco de Preguntas"
+            if (!questionService.saveQuestion(q)) {
+                throw new IllegalStateException("La pregunta se generó pero no se pudo guardar en la base de datos.");
+            }
             txtResult.setText("Pregunta generada:\n"
                     + "Id: " + q.getId() + "\n"
                     + "Título: " + q.getNombre() + "\n"
