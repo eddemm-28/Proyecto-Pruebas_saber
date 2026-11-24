@@ -21,7 +21,7 @@ Documentación de arquitectura del Corte 2, separada del código. Alimenta el SA
 | B04 | Diagrama de eventos con `SimulacroFinalizado`: [A02 §3](A02-diagramas-c4-eventos.md#3-diagrama-de-flujo-de-eventos) |
 | B19 | [C4 Nivel 3, vistas 4+1, ER actualizados y patrones](B19-arquitectura-final.md) · [ADR](adr/README.md) |
 | B20 | [Estructura del documento final (PDF/SAD)](B20-estructura-documento-final.md) |
-| **SAD** | **Documento final sobre la plantilla SAD:** [PDF](SAD-Corte2-Banco-Preguntas-Saber-Pro.pdf) · [Word](SAD-Corte2-Banco-Preguntas-Saber-Pro.docx) |
+| **SAD** | **Documento final sobre la plantilla SAD:** [PDF](../Documentaci%C3%B3n%20Corte%202.pdf) · [Word](../Documentaci%C3%B3n%20Corte%202.docx) |
 
 ## Estructura
 
