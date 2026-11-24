@@ -37,7 +37,7 @@ El Corte 2 migra el monolito MVC del Corte 1 (conservado en [`legacy/corte1-mono
 | `common-events` | Contratos de eventos e interfaces `EventPublisher` / `EventHandler` | Librería |
 | `swing-client` | Cliente de escritorio MVC + **Observer** | Swing |
 
-Documentación de arquitectura (SAD): [`docs/corte2`](docs/corte2/README.md) — servicios y endpoints, C4 1-2-3, ER, eventos, 4+1, ADR, HU, wireframes y escenarios de calidad.
+**Documento de arquitectura (SAD) del Corte 2:** [PDF](docs/corte2/SAD-Corte2-Banco-Preguntas-Saber-Pro.pdf) · [Word](docs/corte2/SAD-Corte2-Banco-Preguntas-Saber-Pro.docx). Fuentes en [`docs/corte2`](docs/corte2/README.md) — servicios y endpoints, C4 1-2-3, ER, eventos, 4+1, ADR, HU, wireframes y escenarios de calidad.
 
 ### Alcance
 
