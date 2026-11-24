@@ -1,0 +1,32 @@
+C4Component
+    title C4 Nivel 3 - Componentes de tracking-service (hexagonal)
+
+    Container(gateway, "api-gateway", "Spring Cloud Gateway")
+    ContainerDb(db, "db_tracking", "PostgreSQL 16")
+    ContainerQueue(mq, "RabbitMQ", "saberpro.events")
+
+    Container_Boundary(inb, "Adaptadores de entrada") {
+        Component(web, "TrackingController", "Spring MVC", "Historial, estadísticas y reportes")
+        Component(listener, "SimulationFinishedListener", "Spring AMQP", "SimulacroFinalizado")
+    }
+
+    Container_Boundary(core, "Núcleo - Java puro") {
+        Component(svc, "TrackingService", "RegisterSimulationResult + TrackingQueries", "Casos de uso B10-B13")
+        Component(calc, "StatisticsCalculator", "Servicio de dominio", "Promedio ponderado, tendencia")
+        Component(policy, "ClassificationPolicy", "Regla RF-27", "Fortaleza >= 70, Debilidad < 50, mín. 5 preguntas")
+    }
+
+    Container_Boundary(outb, "Adaptadores de salida") {
+        Component(jpa, "TrackingPersistenceAdapter", "Spring Data JPA", "Resultados, estadísticas, reportes GROUP BY, idempotencia")
+    }
+
+    Rel(gateway, web, "REST + JWT")
+    Rel(mq, listener, "AMQP")
+    Rel(web, svc, "TrackingQueries")
+    Rel(listener, svc, "RegisterSimulationResult")
+    Rel(svc, calc, "Usa")
+    Rel(calc, policy, "Clasifica")
+    Rel(svc, jpa, "Puertos de salida")
+    Rel(jpa, db, "JDBC")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

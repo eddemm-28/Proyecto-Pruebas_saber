@@ -1,0 +1,46 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: tracking-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5436/db_tracking}
+    username: ${DB_USER:tracking_app}
+    password: ${DB_PASSWORD:tracking_pass}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:saberpro}
+    password: ${RABBITMQ_PASSWORD:saberpro123}
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-dev-secret-dev-secret-0123456789}
+
+# RF-27: umbrales de fortalezas y debilidades
+tracking:
+  classification:
+    strength-threshold: 70
+    weakness-threshold: 50
+    min-questions: 5
+
+management:
+  endpoints.web.exposure.include: health,info
+  endpoint.health.probes.enabled: true

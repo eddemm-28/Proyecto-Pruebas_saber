@@ -1,0 +1,12 @@
+# Override para desarrollo: expone puertos de servicios y bases de datos al host.
+# docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+services:
+  db-users:        { ports: ["5433:5432"] }
+  db-questions:    { ports: ["5434:5432"] }
+  db-simulations:  { ports: ["5435:5432"] }
+  db-tracking:     { ports: ["5436:5432"] }
+  rabbitmq:        { ports: ["5672:5672", "15672:15672"] }
+  user-service:       { ports: ["8081:8081"] }
+  question-service:   { ports: ["8082:8082"] }
+  simulation-service: { ports: ["8083:8083"] }
+  tracking-service:   { ports: ["8084:8084"] }

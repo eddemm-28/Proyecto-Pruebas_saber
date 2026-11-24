@@ -1,0 +1,41 @@
+@startuml despliegue
+title Vista física (4+1) - Despliegue con Docker Compose
+
+node "PC del usuario" as pc {
+  artifact "swing-client.jar\n(Java 17)" as swing
+}
+
+node "Host Docker (docker compose)" as host {
+  node "red saberpro-net" as net {
+    node "api-gateway\n:8080 (publicado)" as gw
+    node "user-service\n:8081" as us
+    node "question-service\n:8082" as qs
+    node "simulation-service\n:8083" as ss
+    node "tracking-service\n:8084" as ts
+    node "rabbitmq\n:5672 / UI :15672" as mq
+    database "db-users\nPostgreSQL 16" as dbu
+    database "db-questions\nPostgreSQL 16" as dbq
+    database "db-simulations\nPostgreSQL 16" as dbs
+    database "db-tracking\nPostgreSQL 16" as dbt
+  }
+  storage "volúmenes Docker" as vol
+}
+
+swing --> gw : HTTP/JSON + JWT
+gw --> us : HTTP
+gw --> qs : HTTP
+gw --> ss : HTTP
+gw --> ts : HTTP
+us --> dbu : JDBC
+qs --> dbq : JDBC
+ss --> dbs : JDBC
+ts --> dbt : JDBC
+qs --> mq : AMQP
+ss --> mq : AMQP
+ts --> mq : AMQP
+dbu ..> vol
+dbq ..> vol
+dbs ..> vol
+dbt ..> vol
+mq ..> vol
+@enduml

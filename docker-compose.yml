@@ -1,0 +1,163 @@
+# A05: entorno local completo del Corte 2.
+#   cp .env.example .env
+#   docker compose up -d --build
+# Solo se publican al host el gateway (8080) y la UI de RabbitMQ (15672).
+# Para depurar con puertos de BD y servicios expuestos:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+x-postgres-healthcheck: &pg-health
+  interval: 5s
+  timeout: 5s
+  retries: 20
+
+x-service-common: &service-common
+  restart: unless-stopped
+  networks: [saberpro-net]
+  environment: &service-env
+    SPRING_PROFILES_ACTIVE: docker
+    JWT_SECRET: ${JWT_SECRET}
+    RABBITMQ_HOST: rabbitmq
+    RABBITMQ_USER: ${RABBITMQ_USER}
+    RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    TZ: UTC
+
+services:
+
+  # ---------------- Bases de datos (una por servicio) ----------------
+  db-users:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: db_users
+      POSTGRES_USER: ${DB_USERS_USER}
+      POSTGRES_PASSWORD: ${DB_USERS_PASSWORD}
+    volumes: [db-users-data:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U ${DB_USERS_USER} -d db_users"], <<: *pg-health }
+    networks: [saberpro-net]
+
+  db-questions:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: db_questions
+      POSTGRES_USER: ${DB_QUESTIONS_USER}
+      POSTGRES_PASSWORD: ${DB_QUESTIONS_PASSWORD}
+    volumes: [db-questions-data:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U ${DB_QUESTIONS_USER} -d db_questions"], <<: *pg-health }
+    networks: [saberpro-net]
+
+  db-simulations:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: db_simulations
+      POSTGRES_USER: ${DB_SIMULATIONS_USER}
+      POSTGRES_PASSWORD: ${DB_SIMULATIONS_PASSWORD}
+    volumes: [db-simulations-data:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U ${DB_SIMULATIONS_USER} -d db_simulations"], <<: *pg-health }
+    networks: [saberpro-net]
+
+  db-tracking:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: db_tracking
+      POSTGRES_USER: ${DB_TRACKING_USER}
+      POSTGRES_PASSWORD: ${DB_TRACKING_PASSWORD}
+    volumes: [db-tracking-data:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U ${DB_TRACKING_USER} -d db_tracking"], <<: *pg-health }
+    networks: [saberpro-net]
+
+  # ---------------- Broker ----------------
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "15672:15672"   # UI de administración
+    volumes: [rabbitmq-data:/var/lib/rabbitmq]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+    networks: [saberpro-net]
+
+  # ---------------- Microservicios ----------------
+  user-service:
+    <<: *service-common
+    build: { context: ., dockerfile: docker/service.Dockerfile, args: { MODULE: user-service } }
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://db-users:5432/db_users
+      DB_USER: ${DB_USERS_USER}
+      DB_PASSWORD: ${DB_USERS_PASSWORD}
+      ADMIN_LOGIN: ${ADMIN_LOGIN}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      db-users: { condition: service_healthy }
+    healthcheck: { test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"], interval: 10s, timeout: 5s, retries: 30, start_period: 40s }
+
+  question-service:
+    <<: *service-common
+    build: { context: ., dockerfile: docker/service.Dockerfile, args: { MODULE: question-service } }
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://db-questions:5432/db_questions
+      DB_USER: ${DB_QUESTIONS_USER}
+      DB_PASSWORD: ${DB_QUESTIONS_PASSWORD}
+    depends_on:
+      db-questions: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck: { test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"], interval: 10s, timeout: 5s, retries: 30, start_period: 40s }
+
+  simulation-service:
+    <<: *service-common
+    build: { context: ., dockerfile: docker/service.Dockerfile, args: { MODULE: simulation-service } }
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://db-simulations:5432/db_simulations
+      DB_USER: ${DB_SIMULATIONS_USER}
+      DB_PASSWORD: ${DB_SIMULATIONS_PASSWORD}
+    depends_on:
+      db-simulations: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck: { test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"], interval: 10s, timeout: 5s, retries: 30, start_period: 40s }
+
+  tracking-service:
+    <<: *service-common
+    build: { context: ., dockerfile: docker/service.Dockerfile, args: { MODULE: tracking-service } }
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://db-tracking:5432/db_tracking
+      DB_USER: ${DB_TRACKING_USER}
+      DB_PASSWORD: ${DB_TRACKING_PASSWORD}
+    depends_on:
+      db-tracking: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck: { test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"], interval: 10s, timeout: 5s, retries: 30, start_period: 40s }
+
+  api-gateway:
+    <<: *service-common
+    build: { context: ., dockerfile: docker/service.Dockerfile, args: { MODULE: api-gateway } }
+    environment:
+      <<: *service-env
+      USER_SERVICE_URL: http://user-service:8081
+      QUESTION_SERVICE_URL: http://question-service:8082
+      SIMULATION_SERVICE_URL: http://simulation-service:8083
+      TRACKING_SERVICE_URL: http://tracking-service:8084
+    ports:
+      - "8080:8080"     # único punto de entrada para el cliente Swing
+    depends_on:
+      user-service: { condition: service_healthy }
+      question-service: { condition: service_healthy }
+      simulation-service: { condition: service_healthy }
+      tracking-service: { condition: service_healthy }
+
+networks:
+  saberpro-net:
+    name: saberpro-net
+
+volumes:
+  db-users-data:
+  db-questions-data:
+  db-simulations-data:
+  db-tracking-data:
+  rabbitmq-data:

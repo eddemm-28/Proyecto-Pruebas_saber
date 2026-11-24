@@ -1,0 +1,20 @@
+@startuml estados-pregunta
+title Máquina de estados de la pregunta (RF-14, RF-15, RNF-16)
+
+[*] --> Borrador : crear
+Borrador --> PendienteRevision : submit (autor)
+Borrador --> Archivada : archive
+PendienteRevision --> EnRevision : start-review (revisor/admin)
+PendienteRevision --> Archivada : archive (admin)
+EnRevision --> Aprobada : approve
+EnRevision --> Rechazada : reject (con motivo)
+Rechazada --> Borrador : return-to-draft (autor)
+Rechazada --> Archivada : archive
+Aprobada --> Publicada : publish (admin)\n/ PreguntaPublicada
+Aprobada --> Archivada : archive
+Publicada --> Archivada : archive (admin)\n/ PreguntaArchivada
+Archivada --> [*]
+
+Borrador : único estado editable (RF-06)
+EnRevision : Corte 3: revisión por pares (HU05)
+@enduml

@@ -1,0 +1,39 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 2000
+        response-timeout: 10s
+      routes:
+        - id: auth
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
+          predicates: [ "Path=/api/auth/**" ]
+        - id: users
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
+          predicates: [ "Path=/api/users/**" ]
+        - id: questions
+          uri: ${QUESTION_SERVICE_URL:http://localhost:8082}
+          predicates: [ "Path=/api/questions/**,/api/plugins/**" ]
+        - id: simulations
+          uri: ${SIMULATION_SERVICE_URL:http://localhost:8083}
+          predicates: [ "Path=/api/simulations/**" ]
+        - id: tracking
+          uri: ${TRACKING_SERVICE_URL:http://localhost:8084}
+          predicates: [ "Path=/api/tracking/**" ]
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-dev-secret-dev-secret-0123456789}
+
+management:
+  endpoints.web.exposure.include: health,info,gateway
+  endpoint.gateway.enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

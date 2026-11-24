@@ -1,0 +1,39 @@
+C4Component
+    title C4 Nivel 3 - Componentes de simulation-service (hexagonal)
+
+    Container(gateway, "api-gateway", "Spring Cloud Gateway")
+    ContainerDb(db, "db_simulations", "PostgreSQL 16")
+    ContainerQueue(mq, "RabbitMQ", "saberpro.events")
+
+    Container_Boundary(inb, "Adaptadores de entrada (infrastructure)") {
+        Component(web, "SimulationController", "Spring MVC", "REST /api/simulations")
+        Component(listener, "QuestionEventsListener", "Spring AMQP", "PreguntaPublicada / PreguntaArchivada")
+        Component(sched, "ExpirationScheduler", "@Scheduled", "Cierra simulacros vencidos (RF-23)")
+    }
+
+    Container_Boundary(core, "Núcleo (domain + application) - Java puro") {
+        Component(uc, "SimulationService", "Puerto de entrada SimulationUseCases", "Iniciar, responder, finalizar, consultar")
+        Component(sync, "QuestionReplicaService", "Puerto de entrada QuestionReplicaSync", "Réplica idempotente")
+        Component(strategy, "QuestionSelectionStrategy x4", "Patrón Strategy", "Competencia, Tema, Dificultad, Mixta")
+        Component(agg, "Simulation + ScoringPolicy", "Agregado de dominio", "Tiempo en servidor y calificación RF-24")
+    }
+
+    Container_Boundary(outb, "Adaptadores de salida (infrastructure)") {
+        Component(jpa, "Persistence adapters", "Spring Data JPA", "SimulationRepository, QuestionReplicaRepository, ProcessedEventStore")
+        Component(pub, "OutboxSimulationEventPublisher + OutboxRelay", "Outbox", "SimulacroFinalizado")
+    }
+
+    Rel(gateway, web, "REST + JWT")
+    Rel(mq, listener, "AMQP")
+    Rel(web, uc, "Puerto de entrada")
+    Rel(sched, uc, "expireOverdue()")
+    Rel(listener, sync, "Puerto de entrada")
+    Rel(uc, strategy, "Selecciona preguntas")
+    Rel(uc, agg, "Opera")
+    Rel(uc, jpa, "Puertos de salida")
+    Rel(sync, jpa, "Puertos de salida")
+    Rel(uc, pub, "SimulationEventPublisher")
+    Rel(jpa, db, "JDBC")
+    Rel(pub, mq, "AMQP")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

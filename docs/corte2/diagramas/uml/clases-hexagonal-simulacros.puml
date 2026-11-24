@@ -1,0 +1,75 @@
+@startuml clases-hexagonal-simulacros
+title Vista de desarrollo (4+1) - Hexágono del simulation-service y patrón Strategy (B05-B09)
+
+package "domain" {
+  class Simulation <<Aggregate>> {
+    +start(...) : Simulation
+    +answer(questionId, option, now)
+    +close(now, status, scoring)
+    +isOverdue(now, grace) : boolean
+  }
+  class SimulationItem
+  class SimulationConfig <<record>>
+  class QuestionSnapshot <<record>>
+  class ScoringPolicy
+  interface QuestionSelectionStrategy {
+    +type() : StrategyType
+    +criteria(config) : CandidateCriteria
+    +select(candidates, config, random) : List<QuestionSnapshot>
+  }
+  class ByCompetenceStrategy
+  class ByTopicStrategy
+  class ByDifficultyStrategy
+  class MixedBalancedStrategy
+  class SelectionStrategyResolver
+}
+
+package "application" {
+  interface SimulationUseCases <<port in>>
+  interface QuestionReplicaSync <<port in>>
+  interface SimulationRepository <<port out>>
+  interface QuestionReplicaRepository <<port out>>
+  interface SimulationEventPublisher <<port out>>
+  interface ProcessedEventStore <<port out>>
+  class SimulationService
+  class QuestionReplicaService
+}
+
+package "infrastructure" {
+  class SimulationController <<adapter in>>
+  class QuestionEventsListener <<adapter in>>
+  class ExpirationScheduler <<adapter in>>
+  class SimulationPersistenceAdapter <<adapter out>>
+  class QuestionReplicaPersistenceAdapter <<adapter out>>
+  class ProcessedEventPersistenceAdapter <<adapter out>>
+  class OutboxSimulationEventPublisher <<adapter out>>
+  class SimulationBeans <<configuration>>
+}
+
+Simulation *-- SimulationItem
+Simulation --> SimulationConfig
+QuestionSelectionStrategy <|.. ByCompetenceStrategy
+QuestionSelectionStrategy <|.. ByTopicStrategy
+QuestionSelectionStrategy <|.. ByDifficultyStrategy
+QuestionSelectionStrategy <|.. MixedBalancedStrategy
+SelectionStrategyResolver o-- QuestionSelectionStrategy
+
+SimulationUseCases <|.. SimulationService
+QuestionReplicaSync <|.. QuestionReplicaService
+SimulationService --> SelectionStrategyResolver
+SimulationService --> ScoringPolicy
+SimulationService --> SimulationRepository
+SimulationService --> QuestionReplicaRepository
+SimulationService --> SimulationEventPublisher
+QuestionReplicaService --> QuestionReplicaRepository
+QuestionReplicaService --> ProcessedEventStore
+
+SimulationController --> SimulationUseCases
+ExpirationScheduler --> SimulationUseCases
+QuestionEventsListener --> QuestionReplicaSync
+SimulationRepository <|.. SimulationPersistenceAdapter
+QuestionReplicaRepository <|.. QuestionReplicaPersistenceAdapter
+ProcessedEventStore <|.. ProcessedEventPersistenceAdapter
+SimulationEventPublisher <|.. OutboxSimulationEventPublisher
+SimulationBeans ..> SimulationService : crea y envuelve en transacción
+@enduml

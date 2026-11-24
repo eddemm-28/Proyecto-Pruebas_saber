@@ -39,7 +39,7 @@
 | Gateway | Valida firma y expiración. Rutas públicas: `POST /api/auth/register`, `POST /api/auth/login`, `GET /actuator/health`. Elimina cualquier `X-User-*` que llegue del cliente y reinyecta `X-User-Id`, `X-User-Login`, `X-User-Role` desde el token |
 | Servicios | Configurados como *resource server* con el mismo secreto (defensa en profundidad) + `@PreAuthorize` por rol |
 | Contraseñas | **BCrypt** (`BCryptPasswordEncoder`, cost 10–12) — RNF-08. *Cambio respecto al Corte 1, que usaba Argon2id:* los usuarios del Corte 1 no se migran; se crean semillas nuevas con Flyway |
-| Registro | **Corrección del Corte 1:** el registro público ya **no** permite elegir rol (en `RegisterFrame` se podía escoger *Administrador*). Toda cuenta nueva nace como `ESTUDIANTE`/`ACTIVO`; los demás roles los asigna un Administrador (RF-03). El primer admin se crea por migración (`V2__seed_admin.sql`) |
+| Registro | **Corrección del Corte 1:** el registro público ya **no** permite elegir rol (en `RegisterFrame` se podía escoger *Administrador*). Toda cuenta nueva nace como `ESTUDIANTE`/`ACTIVO`; los demás roles los asigna un Administrador (RF-03). El primer admin lo crea `AdminBootstrap` al arrancar, con `ADMIN_LOGIN`/`ADMIN_PASSWORD` del `.env` (sin credenciales en SQL) |
 | Errores | Formato único RFC 7807 (`application/problem+json`): `401` token ausente/inválido, `403` rol insuficiente, `409` transición de estado inválida, `422` validación de negocio |
 
 Roles (enum compartido en `common-events`): `ADMINISTRADOR`, `AUTOR`, `REVISOR`, `DOCENTE`, `ESTUDIANTE`. *Coordinador* se modela como `DOCENTE` en el Corte 2.
@@ -69,6 +69,7 @@ Todos bajo el gateway `http://localhost:8080`. Paginación estándar: `?page=0&s
 | GET | `/api/users/{id}` | ADMINISTRADOR | RF-03 | A09 | Detalle |
 | PATCH | `/api/users/{id}/status` | ADMINISTRADOR | RF-03 | A09 | Body: `{status: ACTIVO\|INACTIVO}`. Un admin no puede inactivarse a sí mismo |
 | PATCH | `/api/users/{id}/role` | ADMINISTRADOR | RF-03 | A09 | Body: `{role}`. Se audita en `user_admin_audit` |
+| GET | `/api/users/{id}/admin-audit` | ADMINISTRADOR | RF-03, RNF-09 | A09 | Historial de cambios de rol y estado de un usuario |
 | GET | `/api/users/audit/logins` | ADMINISTRADOR | RNF-09 | A11 | Consulta paginada de `login_audit` (filtros `login`, `success`, `from`, `to`). *Panel avanzado de auditoría global → Corte 3* |
 
 ### 5.2 `question-service` (svc:preguntas)

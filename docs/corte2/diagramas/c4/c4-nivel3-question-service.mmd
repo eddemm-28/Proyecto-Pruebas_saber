@@ -1,0 +1,34 @@
+C4Component
+    title C4 Nivel 3 - Componentes de question-service (svc:preguntas)
+
+    Container(gateway, "api-gateway", "Spring Cloud Gateway", "Valida JWT y enruta")
+    ContainerDb(db, "db_questions", "PostgreSQL 16")
+    ContainerQueue(mq, "RabbitMQ", "saberpro.events")
+
+    Container_Boundary(qs, "question-service") {
+        Component(ctrl, "QuestionController / PluginController", "Spring MVC", "Endpoints REST, transiciones A13/A19, historial")
+        Component(sec, "SecurityConfig", "Spring Security", "Resource server JWT HS256 + roles")
+        Component(svc, "QuestionService", "Servicio de aplicación", "Casos de uso: crear, editar, transicionar, buscar")
+        Component(state, "QuestionState x7", "Patrón State", "Borrador, Pendiente, En revisión, Aprobada, Rechazada, Publicada, Archivada")
+        Component(perm, "QuestionPermissions", "Política", "Quién puede ejecutar cada acción")
+        Component(val, "QuestionValidator + Rules", "Composite de reglas", "RF-08 a RF-13")
+        Component(reg, "QuestionPluginRegistry", "Microkernel", "Carga plugins de plugins.properties (A21)")
+        Component(plugins, "Plugins MC / Caso / Multimedia", "Tuberías y filtros", "Generan QuestionContent estándar")
+        Component(repo, "Repositorios JPA", "Spring Data JPA", "Question, historial, auditoría")
+        Component(outbox, "OutboxWriter + OutboxRelay", "Transactional Outbox", "Publica PreguntaPublicada / PreguntaArchivada")
+    }
+
+    Rel(gateway, ctrl, "REST JSON + JWT")
+    Rel(ctrl, svc, "Invoca")
+    Rel(svc, state, "Delega transiciones")
+    Rel(svc, perm, "Autoriza")
+    Rel(svc, val, "Valida")
+    Rel(svc, reg, "Busca plugin")
+    Rel(reg, plugins, "Instancia")
+    Rel(svc, repo, "Persiste")
+    Rel(svc, outbox, "Encola evento")
+    Rel(repo, db, "JDBC")
+    Rel(outbox, db, "outbox_events")
+    Rel(outbox, mq, "AMQP + confirms")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

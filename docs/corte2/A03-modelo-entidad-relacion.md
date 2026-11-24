@@ -136,6 +136,7 @@ erDiagram
         timestamptz created_at
         timestamptz published_at "NULL = pendiente"
         int attempts
+        varchar last_error
     }
 
     QUESTIONS ||--|{ QUESTION_OPTIONS : "tiene exactamente 4"
@@ -251,6 +252,7 @@ erDiagram
         timestamptz created_at
         timestamptz published_at
         int attempts
+        varchar last_error
     }
 
     QUESTION_REPLICA ||--|{ QUESTION_REPLICA_OPTIONS : "tiene 4"

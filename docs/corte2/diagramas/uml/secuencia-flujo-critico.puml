@@ -1,0 +1,70 @@
+@startuml secuencia-flujo-critico
+title Vista de procesos (4+1) - Flujo crítico: Publicar pregunta -> Simulacro -> Seguimiento
+autonumber
+skinparam responseMessageBelowArrow true
+
+actor Administrador as admin
+actor Estudiante as est
+participant "swing-client" as swing
+participant "api-gateway" as gw
+participant "question-service" as qs
+database "db_questions" as dbq
+queue "RabbitMQ\nsaberpro.events" as mq
+participant "simulation-service" as ss
+database "db_simulations" as dbs
+participant "tracking-service" as ts
+database "db_tracking" as dbt
+
+== Publicación (A18, A19) ==
+admin -> swing : Publicar pregunta aprobada
+swing -> gw : POST /api/questions/{id}/publish (JWT)
+gw -> gw : Validar JWT y rol
+gw -> qs : POST /api/questions/{id}/publish + X-User-*
+qs -> qs : QuestionState(APROBADA).publish()
+qs -> dbq : UPDATE questions + INSERT state_audit + INSERT outbox (1 transacción)
+qs --> gw : 200 PUBLICADA
+gw --> swing : 200
+...cada 2 s...
+qs -> dbq : SELECT outbox pendiente
+qs -> mq : PreguntaPublicada (question.published)
+mq --> qs : publisher confirm
+qs -> dbq : marcar published_at
+mq -> ss : PreguntaPublicada
+ss -> dbs : processed_events + UPSERT question_replica (1 transacción)
+
+== Simulacro (B06 - B09) ==
+est -> swing : Configurar e iniciar
+swing -> gw : POST /api/simulations
+gw -> ss : POST /api/simulations
+ss -> dbs : SELECT question_replica disponibles
+ss -> ss : Strategy.select() + fijar expiresAt
+ss -> dbs : INSERT simulations + items
+ss --> swing : 201 (sin respuestas correctas, serverTime)
+loop por cada pregunta
+  est -> swing : Elegir opción
+  swing -> gw : PUT /api/simulations/{id}/answers/{q}
+  gw -> ss : PUT ...
+  alt dentro del tiempo
+    ss -> dbs : UPDATE item
+    ss --> swing : 200 aceptada
+  else tiempo vencido
+    ss -> dbs : cerrar EXPIRED + outbox SimulacroFinalizado
+    ss --> swing : 409 EXPIRED
+  end
+end
+est -> swing : Finalizar
+swing -> gw : POST /api/simulations/{id}/finish
+gw -> ss : POST ...
+ss -> ss : ScoringPolicy.score() por competencia
+ss -> dbs : UPDATE simulation + scores + INSERT outbox
+ss --> swing : 200 resultado inmediato
+ss -> mq : SimulacroFinalizado (simulation.finished)
+
+== Seguimiento (B10 - B13) ==
+mq -> ts : SimulacroFinalizado
+ts -> dbt : processed_events + INSERT simulation_results + UPSERT student_competence_stats
+est -> swing : Ver mi progreso
+swing -> gw : GET /api/tracking/students/me/stats
+gw -> ts : GET ...
+ts --> swing : 200 fortalezas y debilidades
+@enduml

@@ -80,6 +80,7 @@ erDiagram
         timestamptz created_at
         timestamptz published_at
         int attempts
+        varchar last_error
     }
 
     QUESTION_REPLICA ||--|{ QUESTION_REPLICA_OPTIONS : "tiene 4"

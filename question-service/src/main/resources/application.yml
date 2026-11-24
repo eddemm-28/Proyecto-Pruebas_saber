@@ -1,0 +1,41 @@
+server:
+  port: 8082
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: question-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/db_questions}
+    username: ${DB_USER:questions_app}
+    password: ${DB_PASSWORD:questions_pass}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:saberpro}
+    password: ${RABBITMQ_PASSWORD:saberpro123}
+    publisher-confirm-type: correlated   # confirmaciones para el outbox
+    publisher-returns: true
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-dev-secret-dev-secret-0123456789}
+
+outbox:
+  relay-interval-ms: 2000
+  batch-size: 50
+
+management:
+  endpoints.web.exposure.include: health,info
+  endpoint.health.probes.enabled: true
+
+springdoc:
+  swagger-ui.path: /swagger-ui.html

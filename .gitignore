@@ -1,6 +1,8 @@
-/target/
+target/
 /.idea/
-/*.iml
-/*.db
-# Credenciales del correo (no subir al repositorio)
+*.iml
+*.db
+.env
+# Credenciales del correo del monolito (no subir al repositorio)
 mail.properties
+k6/results/

@@ -1,0 +1,52 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: simulation-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5435/db_simulations}
+    username: ${DB_USER:simulations_app}
+    password: ${DB_PASSWORD:simulations_pass}
+    hikari:
+      maximum-pool-size: 20
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:saberpro}
+    password: ${RABBITMQ_PASSWORD:saberpro123}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: auto
+        default-requeue-rejected: false   # tras agotar reintentos → DLQ
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-dev-secret-dev-secret-0123456789}
+
+simulation:
+  grace-seconds: 2              # margen por latencia de red (RF-23)
+  expiration-check-ms: 30000    # planificador de cierre de vencidos
+
+outbox:
+  relay-interval-ms: 2000
+  batch-size: 50
+
+management:
+  endpoints.web.exposure.include: health,info
+  endpoint.health.probes.enabled: true

@@ -1,0 +1,68 @@
+@startuml clases-patron-state
+title Vista lógica (4+1) - Patrón State en question-service (A13)
+
+interface QuestionStateContext {
+  +getStatus() : QuestionStatus
+  +transitionTo(next : QuestionStatus)
+}
+
+class Question <<Entity>> {
+  -status : QuestionStatus
+  -version : long
+  +state() : QuestionState
+  +apply(action : QuestionAction) : QuestionStatus
+  +updateContent(c : QuestionContent) : List<FieldChange>
+  +allowedActions() : Set<QuestionAction>
+}
+
+interface QuestionState {
+  +status() : QuestionStatus
+  +isEditable() : boolean
+  +allowedActions() : Set<QuestionAction>
+  +submit(ctx)
+  +startReview(ctx)
+  +approve(ctx)
+  +reject(ctx)
+  +returnToDraft(ctx)
+  +publish(ctx)
+  +archive(ctx)
+}
+
+class BorradorState
+class PendienteRevisionState
+class EnRevisionState
+class AprobadaState
+class RechazadaState
+class PublicadaState
+class ArchivadaState
+
+class QuestionStates <<Factory>> {
+  +{static} of(status : QuestionStatus) : QuestionState
+}
+
+class InvalidStateTransitionException
+
+enum QuestionStatus {
+  BORRADOR
+  PENDIENTE_REVISION
+  EN_REVISION
+  APROBADA
+  RECHAZADA
+  PUBLICADA
+  ARCHIVADA
+}
+
+QuestionStateContext <|.. Question
+QuestionState <|.. BorradorState
+QuestionState <|.. PendienteRevisionState
+QuestionState <|.. EnRevisionState
+QuestionState <|.. AprobadaState
+QuestionState <|.. RechazadaState
+QuestionState <|.. PublicadaState
+QuestionState <|.. ArchivadaState
+Question ..> QuestionStates : obtiene estado
+QuestionStates o-- QuestionState
+QuestionState ..> QuestionStateContext : transitionTo()
+QuestionState ..> InvalidStateTransitionException : lanza
+Question --> QuestionStatus
+@enduml
