@@ -1,0 +1,58 @@
+erDiagram
+    %% db_tracking - tracking-service (svc:seguimiento, hexagonal)
+
+    SIMULATION_RESULTS {
+        uuid simulation_id PK "id del simulation-service"
+        uuid student_id
+        varchar student_login
+        varchar final_status "FINISHED | EXPIRED"
+        varchar strategy
+        int total_questions
+        int correct_answers
+        numeric global_score "0-100"
+        int duration_seconds
+        timestamptz started_at
+        timestamptz finished_at
+        timestamptz received_at
+    }
+
+    RESULT_COMPETENCE_SCORES {
+        uuid simulation_id PK, FK
+        varchar competence PK
+        int total_questions
+        int correct_answers
+        numeric score
+    }
+
+    RESULT_ANSWERS {
+        uuid simulation_id PK, FK
+        uuid question_id PK
+        varchar competence
+        varchar topic
+        varchar difficulty
+        boolean answered
+        boolean is_correct
+    }
+
+    STUDENT_COMPETENCE_STATS {
+        uuid student_id PK
+        varchar competence PK
+        varchar student_login
+        int simulations_count
+        int total_questions
+        int correct_answers
+        numeric average_score
+        numeric last_score
+        varchar classification "FORTALEZA | DEBILIDAD | EN_DESARROLLO"
+        timestamptz updated_at
+    }
+
+    PROCESSED_EVENTS {
+        uuid event_id PK
+        varchar event_type
+        timestamptz processed_at
+    }
+
+    SIMULATION_RESULTS ||--|{ RESULT_COMPETENCE_SCORES : "desglosa"
+    SIMULATION_RESULTS ||--|{ RESULT_ANSWERS : "detalla"
+    SIMULATION_RESULTS }o--|| STUDENT_COMPETENCE_STATS : "actualiza (por student_id + competence)"

@@ -1,0 +1,89 @@
+erDiagram
+    %% db_simulations - simulation-service (svc:simulacros, hexagonal)
+
+    QUESTION_REPLICA {
+        uuid question_id PK "id original del question-service"
+        varchar code
+        text context
+        text statement
+        char correct_option "A | B | C | D"
+        text justification
+        varchar competence
+        varchar topic
+        varchar subtopic
+        varchar difficulty
+        varchar status "AVAILABLE | ARCHIVED"
+        bigint source_version "descarta eventos viejos"
+        timestamptz published_at
+        timestamptz synced_at
+    }
+
+    QUESTION_REPLICA_OPTIONS {
+        uuid question_id PK, FK
+        char label PK
+        text text
+    }
+
+    SIMULATIONS {
+        uuid id PK
+        uuid student_id "id del user-service, sin FK física"
+        varchar student_login
+        varchar strategy "COMPETENCE | TOPIC | DIFFICULTY | MIXED"
+        varchar filter_competence
+        varchar filter_topic
+        varchar filter_difficulty
+        int question_count
+        int time_limit_minutes
+        varchar status "IN_PROGRESS | FINISHED | EXPIRED"
+        timestamptz started_at
+        timestamptz expires_at "calculado en el servidor (RF-23)"
+        timestamptz finished_at
+        int correct_count
+        numeric global_score "0-100"
+        bigint version
+    }
+
+    SIMULATION_ITEMS {
+        uuid id PK
+        uuid simulation_id FK
+        uuid question_id FK
+        int position
+        varchar competence "snapshot"
+        varchar topic "snapshot"
+        varchar difficulty "snapshot"
+        char correct_option "snapshot al generar"
+        char selected_option "NULL = sin responder"
+        boolean is_correct
+        timestamptz answered_at
+    }
+
+    COMPETENCE_SCORES {
+        uuid simulation_id PK, FK
+        varchar competence PK
+        int total_questions
+        int correct_answers
+        numeric score "0-100"
+    }
+
+    PROCESSED_EVENTS {
+        uuid event_id PK
+        varchar event_type
+        timestamptz processed_at
+    }
+
+    OUTBOX_EVENTS {
+        uuid id PK
+        uuid aggregate_id
+        varchar event_type "SimulacroFinalizado"
+        varchar routing_key
+        jsonb payload
+        timestamptz created_at
+        timestamptz published_at
+        int attempts
+    }
+
+    QUESTION_REPLICA ||--|{ QUESTION_REPLICA_OPTIONS : "tiene 4"
+    SIMULATIONS ||--|{ SIMULATION_ITEMS : "contiene"
+    QUESTION_REPLICA ||--o{ SIMULATION_ITEMS : "se usa en"
+    SIMULATIONS ||--o{ COMPETENCE_SCORES : "se califica por competencia"
+    SIMULATIONS ||--o| OUTBOX_EVENTS : "emite al finalizar"

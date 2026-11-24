@@ -1,0 +1,72 @@
+erDiagram
+    %% db_questions - question-service (svc:preguntas)
+
+    QUESTIONS {
+        uuid id PK
+        varchar code UK "ej. Q-2026-000123, legible para humanos"
+        varchar title "antes: nombre"
+        varchar question_type "MULTIPLE_CHOICE | CASE | MULTIMEDIA"
+        text context "RF-08 obligatorio"
+        text statement "pregunta directa"
+        char correct_option "A | B | C | D"
+        text justification
+        text bibliography
+        varchar competence
+        varchar topic
+        varchar subtopic
+        varchar difficulty "FACIL | MEDIA | DIFICIL"
+        varchar state "7 estados del patrón State"
+        uuid author_id "id del user-service, sin FK física"
+        varchar author_login "copia para mostrar"
+        varchar plugin_id "plugin que la generó o MANUAL"
+        varchar media_url "solo MULTIMEDIA"
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz published_at
+        timestamptz archived_at
+        bigint version "bloqueo optimista"
+    }
+
+    QUESTION_OPTIONS {
+        uuid question_id PK, FK
+        char label PK "A | B | C | D"
+        text text "NOT NULL, únicas por pregunta"
+    }
+
+    QUESTION_CHANGE_HISTORY {
+        bigserial id PK
+        uuid question_id FK
+        uuid changed_by "id del usuario"
+        varchar changed_by_login
+        varchar field_name
+        text old_value
+        text new_value
+        timestamptz changed_at
+    }
+
+    QUESTION_STATE_AUDIT {
+        bigserial id PK
+        uuid question_id FK
+        varchar from_state "NULL al crear"
+        varchar to_state
+        uuid changed_by
+        varchar changed_by_login
+        varchar comment
+        timestamptz changed_at
+    }
+
+    OUTBOX_EVENTS {
+        uuid id PK "= eventId del mensaje"
+        uuid aggregate_id
+        varchar event_type "PreguntaPublicada | PreguntaArchivada"
+        varchar routing_key
+        jsonb payload
+        timestamptz created_at
+        timestamptz published_at "NULL = pendiente"
+        int attempts
+    }
+
+    QUESTIONS ||--|{ QUESTION_OPTIONS : "tiene exactamente 4"
+    QUESTIONS ||--o{ QUESTION_CHANGE_HISTORY : "registra cambios (RF-29)"
+    QUESTIONS ||--|{ QUESTION_STATE_AUDIT : "registra transiciones (RF-30)"
+    QUESTIONS ||--o{ OUTBOX_EVENTS : "origina"

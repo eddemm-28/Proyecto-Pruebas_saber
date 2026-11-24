@@ -1,0 +1,21 @@
+C4Context
+    title C4 Nivel 1 - Contexto: Banco de Preguntas Saber Pro (Corte 2)
+
+    Person(admin, "Administrador", "Gestiona usuarios, roles y aprueba/publica preguntas (endpoint mínimo A19).")
+    Person(autor, "Autor de preguntas", "Crea y edita preguntas en Borrador y las envía a revisión.")
+    Person(revisor, "Revisor", "Rol reservado. La revisión por pares completa (HU05) llega en el Corte 3.")
+    Person(estudiante, "Estudiante", "Presenta simulacros cronometrados y consulta su historial y estadísticas.")
+    Person(docente, "Docente / Coordinador", "Consulta reportes agregados de rendimiento.")
+
+    System(sistema, "Sistema Banco de Preguntas Saber Pro", "Gestiona, valida y administra el banco de preguntas; genera y califica simulacros y hace seguimiento académico.")
+
+    System_Ext(smtp, "Servidor SMTP", "Envío de correos. Opcional en Corte 2, heredado del Corte 1.")
+
+    Rel(admin, sistema, "Administra usuarios y publica preguntas", "Cliente Swing / HTTPS")
+    Rel(autor, sistema, "Crea, edita y envía preguntas a revisión", "Cliente Swing / HTTPS")
+    Rel(revisor, sistema, "Revisa preguntas (Corte 3)", "Cliente Swing / HTTPS")
+    Rel(estudiante, sistema, "Presenta simulacros y consulta resultados", "Cliente Swing / HTTPS")
+    Rel(docente, sistema, "Consulta reportes", "Cliente Swing / HTTPS")
+    Rel(sistema, smtp, "Envía notificaciones", "SMTP")
+
+    UpdateLayoutConfig($c4ShapeInRow="5", $c4BoundaryInRow="1")

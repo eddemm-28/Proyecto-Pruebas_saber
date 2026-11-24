@@ -1,0 +1,48 @@
+C4Container
+    title C4 Nivel 2 - Contenedores: Banco de Preguntas Saber Pro (Corte 2)
+
+    Person(usuario, "Usuario", "Administrador, Autor, Revisor, Docente o Estudiante")
+
+    Container(swing, "swing-client", "Java 17, Swing, MVC + Observer, java.net.http.HttpClient", "Aplicación de escritorio. Solo conoce la URL del gateway y guarda el JWT en memoria.")
+
+    System_Boundary(backend, "Backend - red Docker interna (saberpro-net)") {
+        Container(gateway, "api-gateway", "Spring Cloud Gateway, Spring Security (JWT)", "Único punto de entrada (:8080). Enruta por prefijo, valida el JWT y propaga X-User-Id, X-User-Login y X-User-Role.")
+        ContainerQueue(rabbit, "RabbitMQ", "RabbitMQ 3.13 + management", "Exchange topic saberpro.events y DLX saberpro.events.dlx")
+
+        Container_Boundary(bUsers, "svc:usuarios") {
+            Container(users, "user-service", "Spring Boot 3, Spring Security, JPA, BCrypt", "Registro, login, emisión de JWT, CRUD de usuarios y auditoría de logins.")
+            ContainerDb(dbUsers, "db_users", "PostgreSQL 16", "users, login_audit, user_admin_audit")
+        }
+        Container_Boundary(bQuestions, "svc:preguntas") {
+            Container(questions, "question-service", "Spring Boot 3, JPA, Spring AMQP", "Banco de preguntas, State, validadores, Microkernel/Plugins, historial y aprobación mínima (A19).")
+            ContainerDb(dbQuestions, "db_questions", "PostgreSQL 16", "questions, question_options, historial, auditoría, outbox")
+        }
+        Container_Boundary(bSimulations, "svc:simulacros (hexagonal)") {
+            Container(simulations, "simulation-service", "Spring Boot 3, Spring AMQP", "Réplica de preguntas publicadas, generación (Strategy), cronómetro en servidor y calificación.")
+            ContainerDb(dbSimulations, "db_simulations", "PostgreSQL 16", "question_replica, simulations, simulation_items, competence_scores")
+        }
+        Container_Boundary(bTracking, "svc:seguimiento (hexagonal)") {
+            Container(tracking, "tracking-service", "Spring Boot 3, Spring AMQP", "Historial, estadísticas, fortalezas/debilidades y reportes agregados.")
+            ContainerDb(dbTracking, "db_tracking", "PostgreSQL 16", "simulation_results, student_competence_stats")
+        }
+    }
+
+    Rel(usuario, swing, "Usa")
+    Rel(swing, gateway, "Llamadas REST + JWT Bearer", "JSON/HTTP :8080")
+
+    Rel(gateway, users, "/api/auth/**, /api/users/**", "HTTP :8081")
+    Rel(gateway, questions, "/api/questions/**, /api/plugins/**", "HTTP :8082")
+    Rel(gateway, simulations, "/api/simulations/**", "HTTP :8083")
+    Rel(gateway, tracking, "/api/tracking/**", "HTTP :8084")
+
+    Rel_D(users, dbUsers, "Lee/escribe", "JPA/JDBC")
+    Rel_D(questions, dbQuestions, "Lee/escribe", "JPA/JDBC")
+    Rel_D(simulations, dbSimulations, "Lee/escribe", "JPA/JDBC")
+    Rel_D(tracking, dbTracking, "Lee/escribe", "JPA/JDBC")
+
+    Rel(questions, rabbit, "Publica PreguntaPublicada, PreguntaArchivada", "AMQP")
+    Rel(rabbit, simulations, "Entrega eventos de preguntas", "AMQP")
+    Rel(simulations, rabbit, "Publica SimulacroFinalizado", "AMQP")
+    Rel(rabbit, tracking, "Entrega SimulacroFinalizado", "AMQP")
+
+    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="2")

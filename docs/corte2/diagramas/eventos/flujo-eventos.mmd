@@ -1,0 +1,48 @@
+flowchart LR
+    %% Diagrama de flujo de eventos - Corte 2 (Ronda 1)
+
+    subgraph QS["question-service (svc:preguntas)"]
+        Q1["POST /api/questions/{id}/publish<br/>Aprobada -> Publicada"]
+        Q2["POST /api/questions/{id}/archive<br/>* -> Archivada"]
+        QO[("outbox_events<br/>db_questions")]
+        Q1 --> QO
+        Q2 --> QO
+    end
+
+    subgraph MQ["RabbitMQ"]
+        EX{{"Exchange topic<br/>saberpro.events"}}
+        QA[["simulation.question-published.q"]]
+        QB[["simulation.question-archived.q"]]
+        QC[["tracking.simulation-finished.q"]]
+        DLX{{"DLX saberpro.events.dlx"}}
+        DLQ[["*.dlq<br/>(una por cola)"]]
+        EX -- "question.published" --> QA
+        EX -- "question.archived" --> QB
+        EX -- "simulation.finished" --> QC
+        QA -. "rechazo tras 3 reintentos" .-> DLX
+        QB -.-> DLX
+        QC -.-> DLX
+        DLX --> DLQ
+    end
+
+    subgraph SS["simulation-service (svc:simulacros)"]
+        S1["Consumer: upsert question_replica<br/>status = AVAILABLE"]
+        S2["Consumer: question_replica<br/>status = ARCHIVED"]
+        S3["POST /api/simulations/{id}/finish<br/>o expiración en servidor"]
+        SO[("outbox_events<br/>db_simulations")]
+        S3 --> SO
+    end
+
+    subgraph TS["tracking-service (svc:seguimiento)"]
+        T1["Consumer: guarda simulation_results<br/>y recalcula student_competence_stats"]
+    end
+
+    QO -- "PreguntaPublicada" --> EX
+    QO -- "PreguntaArchivada" --> EX
+    QA --> S1
+    QB --> S2
+    SO -- "SimulacroFinalizado" --> EX
+    QC --> T1
+
+    classDef evt fill:#fff4d6,stroke:#b7791f,color:#000
+    class EX,DLX evt

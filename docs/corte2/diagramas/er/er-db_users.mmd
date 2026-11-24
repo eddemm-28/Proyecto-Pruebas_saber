@@ -1,0 +1,40 @@
+erDiagram
+    %% db_users - user-service (svc:usuarios)
+
+    USERS {
+        uuid id PK
+        varchar login UK "3-50 caracteres"
+        varchar full_name "NOT NULL"
+        varchar email UK "NOT NULL"
+        varchar password_hash "BCrypt, cost 10-12"
+        varchar role "ADMINISTRADOR | AUTOR | REVISOR | DOCENTE | ESTUDIANTE"
+        varchar status "ACTIVO | INACTIVO"
+        timestamptz created_at
+        timestamptz updated_at
+        bigint version "bloqueo optimista"
+    }
+
+    LOGIN_AUDIT {
+        bigserial id PK
+        uuid user_id FK "NULL si el login no existe"
+        varchar login_attempted "NOT NULL"
+        boolean success
+        varchar failure_reason "BAD_CREDENTIALS | USER_INACTIVE | USER_NOT_FOUND"
+        varchar ip_address
+        varchar client_agent
+        timestamptz occurred_at
+    }
+
+    USER_ADMIN_AUDIT {
+        bigserial id PK
+        uuid target_user_id FK
+        uuid actor_user_id FK
+        varchar action "ROLE_CHANGED | ACTIVATED | INACTIVATED"
+        varchar old_value
+        varchar new_value
+        timestamptz occurred_at
+    }
+
+    USERS ||--o{ LOGIN_AUDIT : "registra intentos de"
+    USERS ||--o{ USER_ADMIN_AUDIT : "es objeto de"
+    USERS ||--o{ USER_ADMIN_AUDIT : "ejecuta como admin"
